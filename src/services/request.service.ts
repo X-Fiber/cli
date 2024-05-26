@@ -7,7 +7,7 @@ import {
   urls,
 } from "~common";
 
-import type { IRequestService, NRequestService, NAxios } from "~types";
+import { IRequestService, NRequestService, NAxios, NLoggerMenu } from "~types";
 
 @injectable()
 export class RequestService implements IRequestService {
@@ -49,6 +49,12 @@ export class RequestService implements IRequestService {
     return "" as R;
   }
 
+  public isAccessToken(): boolean {
+    return (
+      typeof this._accessToken === "string" && this._accessToken.length > 0
+    );
+  }
+
   private async _authRequest(
     routes: NRequestService.AuthRoutes
   ): Promise<void> {
@@ -72,26 +78,32 @@ export class RequestService implements IRequestService {
   ): Promise<NRequestService.ConnectResult> {
     const { connect, secret, user } = this._connect;
 
-    const response = await axios.request({
-      url: `${connect.protocol}://${connect.host}:${connect.port}${baseUrl}${options.endpoint}`,
-      method: "POST",
-      headers: {
-        [MANAGER_AUTH_HEADER]: secret,
-        [MANAGER_USER_HEADER]: user,
-      },
-      data: {
-        si: await this._getSI(),
-        data: options.data,
-      },
-    });
+    try {
+      const response = await axios.request({
+        url: `${connect.protocol}://${connect.host}:${connect.port}${baseUrl}${options.endpoint}`,
+        method: "POST",
+        headers: {
+          [MANAGER_AUTH_HEADER]: secret,
+          [MANAGER_USER_HEADER]: user,
+        },
+        data: {
+          si: await this._getSI(),
+          data: options.data,
+        },
+      });
 
-    if (response.status === 200) {
-      this._accessToken = response.headers[MANAGER_TOKEN_HEADER];
-      return { status: "ok" };
-    } else {
-      return { status: "fail" };
+      if (response.status === 200) {
+        this._accessToken = response.headers[MANAGER_TOKEN_HEADER];
+        return { status: "ok" };
+      } else {
+        return { status: "fail" };
+      }
+    } catch (e) {
+      return { status: "error" };
     }
   }
+
+  public setSchemaLevel(level: NLoggerMenu.LogLevel) {}
 
   private async _request<D = any, R = any>(
     options: NRequestService.RequestOptions<D>

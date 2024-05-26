@@ -1,9 +1,14 @@
-import { injectable, inquirer } from "~packages";
-import { AbstractMenu } from "./abstract.menu";
-
-import type { IAbstractMenu, NLoggerMenu } from "~types";
+import { colors, inject, injectable, inquirer } from "~packages";
 import { container } from "~container";
 import { CliSymbols } from "~symbols";
+import { AbstractMenu } from "./abstract.menu";
+
+import type {
+  IAuthMenu,
+  IAbstractMenu,
+  NLoggerMenu,
+  IRequestService,
+} from "~types";
 
 @injectable()
 export class LoggerMenu extends AbstractMenu implements IAbstractMenu {
@@ -13,34 +18,77 @@ export class LoggerMenu extends AbstractMenu implements IAbstractMenu {
     "Back to main menu",
   ];
 
-  public async publicMenu(): Promise<void> {
-    const { LOGGER_MENU_COMMAND_LIST } =
-      await inquirer.prompt<NLoggerMenu.Choices>([
-        {
-          name: "LOGGER_MENU_COMMAND_LIST",
-          type: "list",
-          choices: this._choices,
-        },
-      ]);
+  private readonly _logLevels: NLoggerMenu.LogLevel[] = [
+    "1. error",
+    "2. warn",
+    "3. info",
+    "4. schema",
+    "5. debug",
+  ];
 
-    switch (LOGGER_MENU_COMMAND_LIST) {
+  private readonly _logTransports: NLoggerMenu.LogTransport[] = [
+    "console",
+    "file",
+  ];
+
+  constructor(
+    @inject(CliSymbols.RequestService)
+    private readonly _requestService: IRequestService
+  ) {
+    super();
+  }
+
+  public async menu(): Promise<void> {
+    const { LOGGER_MENU } = await inquirer.prompt<NLoggerMenu.Choices>([
+      {
+        name: "LOGGER_MENU",
+        type: "list",
+        message: "Choose specific logger command 👇",
+        choices: this._choices,
+      },
+    ]);
+
+    switch (LOGGER_MENU) {
       case "Set schema logger level":
         await this._setSchemeLevel();
         this.separator;
-        await this.publicMenu();
+        await this.menu();
         break;
       case "Set schema logger transport":
         await this._setSchemeTransport();
         this.separator;
-        await this.publicMenu();
+        await this.menu();
         break;
       case "Back to main menu":
         this.separator;
-        await container.get<IAbstractMenu>(CliSymbols.MainMenu).publicMenu();
+        await container.get<IAuthMenu>(CliSymbols.AuthMenu).privateMenu();
         break;
     }
   }
 
-  private async _setSchemeLevel(): Promise<void> {}
-  private async _setSchemeTransport(): Promise<void> {}
+  private async _setSchemeLevel(): Promise<void> {
+    const { LOGGER_MENU } = await inquirer.prompt<NLoggerMenu.Choices>([
+      {
+        name: "LOGGER_MENU",
+        type: "list",
+        message: "Choose log level for scheme logger ⚙️",
+        choices: this._logLevels,
+      },
+    ]);
+
+    console.log(colors.green(colors.bold("Log level change successful ✅")));
+  }
+
+  private async _setSchemeTransport(): Promise<void> {
+    const { LOGGER_MENU } = await inquirer.prompt<NLoggerMenu.Choices>([
+      {
+        name: "LOGGER_MENU",
+        type: "checkbox",
+        message: "Enable next scheme logger transports 📗️",
+        choices: this._logTransports,
+      },
+    ]);
+
+    console.log(colors.green(colors.bold("Log transports enabled ✅")));
+  }
 }

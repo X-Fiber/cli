@@ -1,4 +1,5 @@
 export interface IRequestService {
+  isAccessToken(): boolean;
   setConnectOptions(options: NRequestService.ConnectOptions): void;
   login(
     options: NRequestService.RequestOptions<NRequestService.ConnectOptions>
@@ -42,9 +43,7 @@ export namespace NRequestService {
     secret: string;
   };
 
-  export type ConnectResult = { status: "ok" | "fail" };
-
-  export type LogLevel = "error" | "warn" | "info" | "schema" | "debug";
+  export type ConnectResult = { status: "ok" | "fail" | "error" };
 
   export type SiDetails = {
     manufacturer: string;

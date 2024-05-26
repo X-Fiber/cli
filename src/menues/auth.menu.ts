@@ -1,36 +1,93 @@
 import { injectable, inject, inquirer, colors } from "~packages";
 import { CliSymbols } from "~symbols";
+import { urls } from "~common";
 import { AbstractMenu } from "./abstract.menu";
 
 import type { IAbstractMenu, IRequestService, NAuthMenu } from "~types";
-import * as url from "node:url";
-import { urls } from "~common";
+import { container } from "~container";
 
 @injectable()
 export class AuthMenu extends AbstractMenu implements IAbstractMenu {
-  private readonly _choices: NAuthMenu.Prompts = ["Login"];
+  private readonly _choices: NAuthMenu.Prompts = [
+    "Logger namespace (change logging options)",
+    "Discovery namespace (reload configurations)",
+    "Login",
+    "Help",
+    "Exit",
+  ];
 
   constructor(
     @inject(CliSymbols.RequestService)
-    private readonly _requestService: IRequestService
+    private readonly _requestService: IRequestService,
+    @inject(CliSymbols.DiscoveryMenu)
+    private readonly _discoveryMenu: IAbstractMenu,
+    @inject(CliSymbols.LoggerMenu)
+    private readonly _loggerMenu: IAbstractMenu
   ) {
     super();
   }
 
-  public async publicMenu(): Promise<void> {
+  public async menu(): Promise<void> {
     try {
-      const auth = await this._loginForm();
-      console.log(auth);
-      auth ? await this._privateMenu() : await this.publicMenu();
+      const { status } = await this._loginForm();
+      switch (status) {
+        case "ok":
+          this.separator;
+          await this.privateMenu();
+          break;
+        case "fail":
+          this.separator;
+          await this.menu();
+          break;
+        case "error":
+          this.separator;
+          await this.menu();
+          break;
+      }
     } catch (e) {
-      console.log(e);
       console.error("Compute core is unavailable");
     }
   }
 
-  private async _privateMenu(): Promise<void> {}
+  public async privateMenu(): Promise<void> {
+    const { PRIVATE_AUTH_MENU } = await inquirer.prompt<NAuthMenu.Choices>({
+      name: "PRIVATE_AUTH_MENU",
+      type: "list",
+      message: "Choose specific namespace with commands 👇",
+      choices: this._choices,
+    });
 
-  private async _loginForm(): Promise<boolean> {
+    switch (PRIVATE_AUTH_MENU) {
+      case "Logger namespace (change logging options)":
+        await this._loggerMenu.menu();
+        this.separator;
+        await this.privateMenu();
+        break;
+      case "Discovery namespace (reload configurations)":
+        await this._discoveryMenu.menu();
+        this.separator;
+        await this.privateMenu();
+        break;
+      case "Login":
+        try {
+          await this.menu();
+        } catch {
+          console.error("Compute core is unavailable");
+        }
+        break;
+      case "Help":
+        this._help();
+        this.separator;
+        await this.privateMenu();
+        break;
+      case "Exit":
+        this._exit();
+        this.separator;
+        break;
+    }
+  }
+
+  private async _loginForm(): Promise<{ status: "ok" | "fail" | "error" }> {
     const { LOGIN_CREDENTIALS } = await inquirer.prompt({
       name: "LOGIN_CREDENTIALS",
       type: "input",
@@ -46,7 +103,7 @@ export class AuthMenu extends AbstractMenu implements IAbstractMenu {
           `Credentials raw invalid. Raw must be contain protocol, host, port, username and secret. For example 'http 0.0.0.0 11008 Admin x-fiber-secret'`
         )
       );
-      this.separator;
+      return { status: "fail" };
     }
 
     const [protocol, host, port, username, secret] = chunks;
@@ -57,7 +114,7 @@ export class AuthMenu extends AbstractMenu implements IAbstractMenu {
           colors.bold(`Protocol invalid. Supported 'http' or 'https' variants.`)
         )
       );
-      this.separator;
+      return { status: "fail" };
     }
 
     const data = {
@@ -73,9 +130,33 @@ export class AuthMenu extends AbstractMenu implements IAbstractMenu {
         data,
       });
 
-      return status === "ok";
+      switch (status) {
+        case "ok":
+          console.log(
+            colors.green(colors.bold("Successful connect to compute core 👍"))
+          );
+          break;
+        case "fail":
+          console.log(
+            colors.red(
+              colors.bold(
+                "Compute core for this connection options is not available 🚫"
+              )
+            )
+          );
+          break;
+      }
+
+      return { status };
     } catch (e) {
-      return false;
+      console.log(
+        colors.red(
+          colors.bold(
+            "Compute core for this connection options is not available 🚫"
+          )
+        )
+      );
+      return { status: "error" };
     }
   }
 }

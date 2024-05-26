@@ -13,7 +13,7 @@ export class Initiator implements IInitiator {
 
   public async start(): Promise<void> {
     logBanner();
-    await this.mainMenu.publicMenu();
+    await this.mainMenu.menu();
   }
 
   public async stop(): Promise<void> {}

@@ -1,16 +1,24 @@
 import { KeyObjectMapper } from "./utils";
 
 export interface IAbstractMenu {
-  publicMenu(): Promise<void>;
+  menu(): Promise<void>;
+}
+
+export interface IAuthMenu extends IAbstractMenu {
+  privateMenu(): Promise<void>;
 }
 
 export namespace NAuthMenu {
   export type Commands = {
+    LOGGER: "Logger namespace (change logging options)";
+    DISCOVERY: "Discovery namespace (reload configurations)";
     LOGIN: "Login";
+    HELP: "Help";
+    EXIT: "Exit";
   };
 
   export type Prompts = Array<Commands[keyof Commands]>;
-  export type Choices = KeyObjectMapper<"PUBLIC_AUTH_MENU", Commands>;
+  export type Choices = KeyObjectMapper<"PRIVATE_AUTH_MENU", Commands>;
 }
 
 export namespace NMainMenu {
@@ -39,6 +47,15 @@ export namespace NDiscoveryMenu {
 }
 
 export namespace NLoggerMenu {
+  export type LogLevel =
+    | "1. error"
+    | "2. warn"
+    | "3. info"
+    | "4. schema"
+    | "5. debug";
+
+  export type LogTransport = "console" | "file";
+
   export type Commands = {
     SET_SCHEME_LEVEL: "Set schema logger level";
     SET_SCHEME_TRANSPORT: "Set schema logger transport";
@@ -46,5 +63,5 @@ export namespace NLoggerMenu {
   };
 
   export type Prompts = Array<Commands[keyof Commands]>;
-  export type Choices = KeyObjectMapper<"LOGGER_MENU_COMMAND_LIST", Commands>;
+  export type Choices = KeyObjectMapper<"LOGGER_MENU", Commands>;
 }

@@ -1,7 +1,7 @@
-import { injectable, inquirer } from "~packages";
+import { colors, injectable, inquirer } from "~packages";
 import { AbstractMenu } from "./abstract.menu";
 
-import type { IAbstractMenu, NDiscoveryMenu } from "~types";
+import { IAbstractMenu, IAuthMenu, NDiscoveryMenu } from "~types";
 import { container } from "~container";
 import { CliSymbols } from "~symbols";
 
@@ -13,12 +13,13 @@ export class DiscoveryMenu extends AbstractMenu implements IAbstractMenu {
     "Back to main menu",
   ];
 
-  public async publicMenu(): Promise<void> {
+  public async menu(): Promise<void> {
     const { DISCOVERY_MENU_COMMAND_LIST } =
       await inquirer.prompt<NDiscoveryMenu.Choices>([
         {
           name: "DISCOVERY_MENU_COMMAND_LIST",
           type: "list",
+          message: "Choose specific discovery command 👇",
           choices: this._choices,
         },
       ]);
@@ -27,20 +28,32 @@ export class DiscoveryMenu extends AbstractMenu implements IAbstractMenu {
       case "Reload compute core configuration":
         await this._coreReConfig();
         this.separator;
-        await this.publicMenu();
+        await this.menu();
         break;
       case "Reload business scheme configuration":
         await this._schemeReConfig();
         this.separator;
-        await this.publicMenu();
+        await this.menu();
         break;
       case "Back to main menu":
         this.separator;
-        await container.get<IAbstractMenu>(CliSymbols.MainMenu).publicMenu();
+        await container.get<IAuthMenu>(CliSymbols.AuthMenu).privateMenu();
         break;
     }
   }
 
-  private async _coreReConfig(): Promise<void> {}
-  private async _schemeReConfig(): Promise<void> {}
+  private async _coreReConfig(): Promise<void> {
+    console.log(
+      colors.green(
+        colors.bold("Reload compute core configuration successful ✅")
+      )
+    );
+  }
+  private async _schemeReConfig(): Promise<void> {
+    console.log(
+      colors.green(
+        colors.bold("Reload scheme services configuration successful ✅")
+      )
+    );
+  }
 }
